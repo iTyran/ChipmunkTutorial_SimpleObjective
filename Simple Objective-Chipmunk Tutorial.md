@@ -1,3 +1,4 @@
+-----  E.Y -----
 #Simple Objective-Chipmunk Tutorial:
 
 
@@ -45,6 +46,7 @@ A lot of people do this the other way around. They loop over all the collision s
 
 The goal is to make a box that we can move around the screen by tilting the iPhone or tapping on the box. Going a bit further, we'll also use collision callbacks to change the screen color and play impact sounds. There are basically 2 classes: ViewContoller which we are using like a game controller, and FallingButton which we are using like a game object controller.
 
+--- 夜狼 ---
 #ViewController.m - A Bare Bones Game Controller
 
 A game controller is responsible for for a couple of things. A game controller's main responsibility is to control the game's logic, to decide when the player wins or loses, that sort of thing. Our simple example doesn't really have any rules, so we'll skip straight to it's other responsibilities: managing the game loop and handling adding and removing game objects.
@@ -237,6 +239,7 @@ Putting this all together we have the finished separate callback:
           }
         }
         
+-----  wAe]ChildhoodAndy ------        
 #Collision Callbacks: post-solve
 
 Another pretty common thing to do with callbacks is to play impact sounds. To make it sound good, we want to set the volume of the sound based on how hard the objects hit. This is exactly the sort of thing that the post-solve callback is for. Chipmunk has finished resolving a collision, and it gives you chance to read back the impulse it applied to do it.
