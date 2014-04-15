@@ -240,146 +240,172 @@ Putting this all together we have the finished separate callback:
         }
         
 -----  wAe]ChildhoodAndy ------        
-#Collision Callbacks: post-solve
+#碰撞回调：post-solve
 
-Another pretty common thing to do with callbacks is to play impact sounds. To make it sound good, we want to set the volume of the sound based on how hard the objects hit. This is exactly the sort of thing that the post-solve callback is for. Chipmunk has finished resolving a collision, and it gives you chance to read back the impulse it applied to do it.
+另一个很常见的回调处理就是播放碰撞声音了。为了让声音听起来自然，我们要基于物体撞击的力度来设置音量的大小。这便是post-solve回调要解决的问题。Chipmunk已经完成了碰撞解决，使得你有机会取得施加的冲力。
 
-The post-solve callback method signature looks like the separate one:
+post-solve回调方法签名如下：
 
-          - (void)postSolveCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space
+```
+- (void)postSolveCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space
+```
+和begin、seperate回调只发生在碰撞的第一帧和最后一帧不同，pre-solve和post-solve回调在两个形状接触过程中被每帧调用。为了播放一个碰撞声音，我们只需要关心第一帧。Chipmunk提供了一个C函数，你可以使用仲裁者来测试这是否是第一帧两个形状发生了碰撞。如果不是第一帧，我们使用它来提前退出。
 
-Unlike the begin and separate callbacks which just happen on the first and last frames of a collision, the pre-solve and post-solve callbacks are called every frame that the two shapes are touching. For playing a collision sound, we really only care about the first frame. Chipmunk provides a C function that you can use on the arbiter to test if this is the first frame that to shapes have been colliding. We'll use that to exit early from the function if it's not the first frame.
+```
+if(!cpArbiterIsFirstContact(arbiter)) return;
+```
+有了这样的方式，现在我们只需要计算出物体间碰撞的力度以及播放一个基于力度大小的声音。
 
-        if(!cpArbiterIsFirstContact(arbiter)) return;
+```
+cpFloat impulse = cpvlength(cpArbiterTotalImpulse(arbiter));
         
-With that out of the way, now we just need to find out how hard the objects hit and play a sound based off of that.
+float volume = MIN(impulse/500.0f, 1.0f);
+if(volume > 0.05f){
+	[SimpleSound playSoundWithVolume:volume];
+}
+```        
 
-        cpFloat impulse = cpvlength(cpArbiterTotalImpulse(arbiter));
+`cpArbiterTotalImpulse()` 返回一个向量。我们只关心力的大小，所以我们使用`cpvlength()`来得到向量的大小。将我们计算的大小进行截断确保不能大于1.0，并且如果足够响亮就播放声音。简单！
+
+整合上面的代码，我们得到了完整的post-solve回调：
+
+```
+- (void)postSolveCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space {
+	if(!cpArbiterIsFirstContact(arbiter)) return;
+
+	cpFloat impulse = cpvlength(cpArbiterTotalImpulse(arbiter));
+
+	float volume = MIN(impulse/500.0f, 1.0f);
+	if(volume > 0.05f){
+ 		[SimpleSound playSoundWithVolume:volume];
+	}
+}
+```
+上面基本就是游戏控制器了。
+
+#Falling Button:一个简单的游戏对象控制器
+
+和游戏控制器类似，游戏对象控制器的主要功能就是管理游戏对象的逻辑更新并将图形和物理两者做绑定。在这篇教程中，falling button的逻辑比较简单。我们所要做的就是点击它的时候让它向随机的方向移动。
+
+## 初始化设置：
+
+让我们从初始化开始来了解下游戏对象的组成。它由一个初始化的UIButton实例启动。下面是非常标准的Cocoa程序：
+
+```
+button = [UIButton buttonWithType:UIButtonTypeCustom];
+[button setTitle:@"Click Me!" forState:UIControlStateNormal];
+[button setTitleColor:[UIColor blueColor] forState:UIControlStateNormal];
+[button setBackgroundImage:[UIImage imageNamed:@"logo.png"]
+	forState:UIControlStateNormal];
+button.bounds = CGRectMake(0, 0, SIZE, SIZE);
         
-        float volume = MIN(impulse/500.0f, 1.0f);
-        if(volume > 0.05f){
-        [SimpleSound playSoundWithVolume:volume];
-        }
+[button addTarget:self action:@selector(buttonClicked)	forControlEvents:UIControlEventTouchDown];
+```
+相当简单。现在我们来为它设置物理特性。我们先定义按钮的质量和转动惯量。等下！你会问这里说的转动惯量是什么意思。这看你怎么想的了。如果你认为物体的质量描述了物体移动起来需要的力度，那么转动惯量就是让物体转动起来需要的力度。
 
-cpArbiterTotalImpulse() returns a vector. We only really care about the size of the force, so we use cpvlength() to get the length of the vector. From that we calculate a volume, clamp it so that it's no bigger than 1.0 and play the sound if it's loud enough! Easy!
+```
+cpFloat mass = 1.0f;
+cpFloat moment = cpMomentForBox(mass, SIZE, SIZE);
+```
+        
+你可以轻松的为质量赋值并不需要使用任何特定的单位。只要确保他们彼此关联对比的要有意义。如果一个汽车的质量为1，那么一只狗的质量应该为0.01或者类似小的值。因为场景中只有一个按钮，所以我们为它设置的质量大与小无所谓了。反应会如出一辙。另一方面，对转动惯量进行猜测或赋值是个糟糕的想法。假设SIZE是100，那么按照上述方式计算的转动惯量将是850！
 
-Putting that all together, we have our completed post-solve callback:
+为了乐趣所在，你应该尝试着看看不同的转动惯量值的影响，以及为什么使用Chipmunk提供的转动惯量估算函数很重要。你可以在`cpBody`C文件里找到更多的这些估算函数。
 
-        - (void)postSolveCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space {
-          if(!cpArbiterIsFirstContact(arbiter)) return;
+下面，我们来使用计算好的质量和转动惯量来初始化一个刚体：
+
+```
+body = [[ChipmunkBody alloc] initWithMass:mass andMoment:moment];
+```
+刚体拥有物理对象的物理属性。比如质量、位置、速度和角度。一旦你创建了个刚体，你便可以将任意数量的碰撞形状和关节与之关联。刚体有一些读写的属性，比如pos，vel，mass等等。当第一次创建的时候，除了质量和转动惯量外，大部分这些属性都为0。让我们将形状的位置设置在屏幕中间的某处。
+    
+```
+body.pos = cpv(200.0f, 200.0f);
+```
+现在我们到了有趣的环节。为刚体创建一个碰撞形状使得它可以与屏幕边界形状进行碰撞。Chipmunk目前支持3种碰撞形状：圆形、线段和多边形。它具有便利的构造函数用来创建盒子状多边形。我们将使用它。因为我们不需要将物体存储为一个实例变量，所以我们使用autorelease构造函数。
+
+```
+ChipmunkShape *shape = [ChipmunkPolyShape boxWithBody:body width:SIZE height:SIZE];
+```
+这将创建一个长宽为SIZE的方形形状并关联到我们的刚体上。上面那个便捷的构造函数会将box形状居中放置到时刻与刚体位置保持一致的刚体重心位置上。重心也是刚体旋转所围绕的点。
+        
+如`ChipmunkBody`对象一样，`ChipmunkShape`对象也有一些你可能需要设置的属性：
+
+```
+shape.elasticity = 0.3f;
+shape.friction = 0.3f;
+```
+`elasticity`控制着刚体有多大的弹性。当两个形状碰撞时，他们的弹性值会被相乘得到碰撞的弹性值。0意味着没有弹性，1意味着完全反弹。你可以设置大于1.0的值，意味着物体在每次碰撞之后会加速，可能会超出我们的控制。`friction`工作机制相同，两个形状的摩擦力相乘决定了最终施加的摩擦力。你可以从斜坡面的角度来考虑摩擦力值。如果摩擦力值是1，那么物体将会停止在45度的斜坡上。如果摩擦力值是0.5，那么物体将会停止在Atan(0.5) = 26.6度的斜坡上。
+    
+下面我们来设置在碰撞回调中要使用到的属性：
+
+```
+shape.collisionType = [FallingButton class];
+shape.data = self;
+```
+如果你还记得上面，`collisionType`在创建碰撞回调被用来当作关键值，`data`属性可以引用回我们的falling button对象。
+
+最后，我们需要实现`ChipmunkObject`协议以便我们不必再手动添加碰撞形状和刚体到空间中去。要做到这一点，我们需要做的就是实现一个单一的方法，该方法返回一个NSSet，它包含了这个游戏对象使用的所有基本的Chipmunk对象。最简单的方式就是使用`synthesized`属性。然后，你需要做的就是创建一个名为`chipmunkObjects`的实例变量并且使用`ChipmunkObjectFlatten()`函数来初始化它。你可以传递任何实现ChipmunkObject协议的值给`ChipmunkObjectFlatten()`函数。别忘记nil终止符和retain它返回的set结合。
+
+```
+chipmunkObjects = [ChipmunkObjectFlatten(body, shape, nil) retain];
+```
+
+将上面的整合一下，我们的初始化代码如下：
+
+```
+- (id)init {
+	if(self = [super init]){
+		button = [UIButton buttonWithType:UIButtonTypeCustom];
+		[button setTitle:@"Click Me!" forState:UIControlStateNormal];
+		[button setTitleColor:[UIColor blueColor] forState:UIControlStateNormal];
+		[button setBackgroundImage:[UIImage imageNamed:@"logo.png"] forState:UIControlStateNormal];
+		button.bounds = CGRectMake(0, 0, SIZE, SIZE);
+            
+		[button addTarget:self action:@selector(buttonClicked) forControlEvents:UIControlEventTouchDown];
+            
+		cpFloat mass = 1.0f;
+		cpFloat moment = cpMomentForBox(mass, SIZE, SIZE);
+            
+		body = [[ChipmunkBody alloc] initWithMass:mass andMoment:moment];
+		body.pos = cpv(200.0f, 200.0f);
+            
+		ChipmunkShape *shape = [ChipmunkPolyShape boxWithBody:body width:SIZE height:SIZE];
+		shape.elasticity = 0.3f;
+		shape.friction = 0.3f;
+		shape.collisionType = [FallingButton class];
+		shape.data = self;
+            
+		chipmunkObjects = [ChipmunkObjectFlatten(body, shape, nil) retain];
+	}
           
-          cpFloat impulse = cpvlength(cpArbiterTotalImpulse(arbiter));
-          
-          float volume = MIN(impulse/500.0f, 1.0f);
-          if(volume > 0.05f){
-            [SimpleSound playSoundWithVolume:volume];
-          }
-        }
-That's pretty much it for the game controller.
-
-#Falling Button: A Simple Game Object Controller
-
-Like a game controller, the game object controller's main responsibility is to manage the logic updates for a game object and bind the graphics and physics together. In this tutorial, the logic of the falling button is simple. All we want it to do is to move in a random direction when you click on it.
-
-###Initialization and Setup:
-
-Lets start with the initialization again to get a feel for what the game object is made of. It starts off with initializing a UIButton instance. Pretty standard Cocoa programming here:
-
-        button = [UIButton buttonWithType:UIButtonTypeCustom];
-        [button setTitle:@"Click Me!" forState:UIControlStateNormal];
-        [button setTitleColor:[UIColor blueColor] forState:UIControlStateNormal];
-        [button setBackgroundImage:[UIImage imageNamed:@"logo.png"] forState:UIControlStateNormal];
-        button.bounds = CGRectMake(0, 0, SIZE, SIZE);
+	return self;
+}
+```      
         
-        [button addTarget:self action:@selector(buttonClicked) forControlEvents:UIControlEventTouchDown];
-    
-Pretty easy. Now we set up the physics for it. Lets start by defining the mass and moment of inertia of the button. Wait! What is this moment of inertia that I'm talking about you ask? It sounds completely made up you say! If you think of the mass of an object as being how hard it is to move an object around, the moment of inertia is how hard it is to spin an object.
+#按钮动作:
 
-        cpFloat mass = 1.0f;
-        cpFloat moment = cpMomentForBox(mass, SIZE, SIZE);
-        
-You can easily just make up numbers for the mass as you don't need to use any particular units. Just make sure that they make sense in relation to each other. If a car has a mass of 1, then a dog should have a mass of 0.01 or something like that. With the button being the only thing on the screen, it doesn't really matter what mass we give it. It would react exactly the same. On the other hand, guessing or making up numbers for the moment of inertia is a really bad idea. Assuming that SIZE is 100, then the moment of inertia calculated above will be 850!
+剩下唯一的事情就是处理点击按钮时所调用的方法了。
 
-Just for the fun of it, you should try seeing what other values for the moment of inertia does, and why it's important to use the moment estimation functions that Chipmunk provides. You can find more of these estimation functions in the cpBody C docs.
-
-Next, we'll use the calculated mass and moment of inertia to make a rigid body:
-
-        body = [[ChipmunkBody alloc] initWithMass:mass andMoment:moment];
-    
-Rigid bodies hold the physical properties of a physics object. Things like it's mass, position, velocity and rotation. Once you've created a rigid body, you can attach any number of collision shapes and joints to it. Bodies have a number of properties that you can read and write such as pos, vel, mass and so on. When first created, most of these properties other than the mass and moment of inertia will be zero. Let's set the position of the shape to be somewhere in the middle of the screen.
-
-        body.pos = cpv(200.0f, 200.0f);
-        
-Now we can get to the interesting part and create a collision shape for it so it will collide with the screen boundary shapes. Chipmunk supports 3 collision shapes at the moment. Circrles, line segments, and polygons. It also has a convenience constructor for creating box shaped polygons. We'll use that. Because we aren't storing the object in an instance variable, we'll use the autorelease constructor. (More on this later.)
-
-        ChipmunkShape *shape = [ChipmunkPolyShape boxWithBody:body width:SIZE height:SIZE];
-        
-This creates a square of SIZE and attaches it to our rigid body. The box convenience constructor simply centers the box on the center of gravity of the rigid body which is always at body.pos. The center of gravity is also the point that the rigid body rotates around.
-
-Like ChipmunkBody objects, ChipmunkShape objects have a number of properties that you might want to set:
-
-        shape.elasticity = 0.3f;
-        shape.friction = 0.3f;
-    
-Elasticity controls how bouncy a body is. When two shapes collide, their elasticity values are multiplied together to get the elasticity of the collision. 0 means no bounce, and 1 would make something bounce perfectly. While you can go above 1.0, it means that the object will speed up every time it hits something and will probably fly out of control. Friction works the same way, by multiplying the friction values of the two shapes to determine the final friction to apply. You can think of the friction value as being in terms of surface slopes. If the friction value is 1 then the objects will be able to stop on a 45 degree slope. If the friction value was 0.5, then the objects would be able to stop on a slope of Atan(0.5) = 26.6 degrees
-
-Next we'll set up the properties used in collision callbacks:
-
-        shape.collisionType = [FallingButton class];
-        shape.data = self;
-    
-If you remember from earlier, collisionType is used as a key value when setting up collision handler callbacks and the data property was how we got a reference back to our falling button object.
-
-Lastly, we need to implement the ChipmunkObject protocol so that we don't have to add the collision shape and rigid body to the space by hand. To do that, all we need to do is implement a single method chipmunkObjects which returns an NSSet that contains all the basic Chipmunk objects this game object uses. The easiest way to do that is to use a synthesized property. Then all you have to do is create an instance variable named chipmunkObjects and use the ChipmunkObjectFlatten() function to initialize it. You can pass anything that implements the ChipmunkObject protocol to ChipmunkObjectFlatten(). Just don't forget about the nil terminator and don't forget to retain the set it returns!
-
-        chipmunkObjects = [ChipmunkObjectFlatten(body, shape, nil) retain];
-        
-Putting this all together, our initialization method looks like this:
-
-        - (id)init {
-          if(self = [super init]){
-            button = [UIButton buttonWithType:UIButtonTypeCustom];
-            [button setTitle:@"Click Me!" forState:UIControlStateNormal];
-            [button setTitleColor:[UIColor blueColor] forState:UIControlStateNormal];
-            [button setBackgroundImage:[UIImage imageNamed:@"logo.png"] forState:UIControlStateNormal];
-            button.bounds = CGRectMake(0, 0, SIZE, SIZE);
-            
-            [button addTarget:self action:@selector(buttonClicked) forControlEvents:UIControlEventTouchDown];
-            
-            cpFloat mass = 1.0f;
-            cpFloat moment = cpMomentForBox(mass, SIZE, SIZE);
-            
-            body = [[ChipmunkBody alloc] initWithMass:mass andMoment:moment];
-            body.pos = cpv(200.0f, 200.0f);
-            
-            ChipmunkShape *shape = [ChipmunkPolyShape boxWithBody:body width:SIZE height:SIZE];
-            shape.elasticity = 0.3f;
-            shape.friction = 0.3f;
-            shape.collisionType = [FallingButton class];
-            shape.data = self;
-            
-            chipmunkObjects = [ChipmunkObjectFlatten(body, shape, nil) retain];
-          }
-          
-          return self;
-        }
-        
-#Button Action:
-
-The only thing remaining is to make the method that gets called when the button is clicked.
+`frand_unit`函数
+```
 static cpFloat frand_unit(){return 2.0f*((cpFloat)rand()/(cpFloat)RAND_MAX) - 1.0f;}
+```
 
-        - (void)buttonClicked {
-          cpVect v = cpvmult(cpv(frand_unit(), frand_unit()), 300.0f);
-          body.vel = cpvadd(body.vel, v);
+```
+- (void)buttonClicked {
+	cpVect v = cpvmult(cpv(frand_unit(), frand_unit()), 300.0f);
+	body.vel = cpvadd(body.vel, v);
           
-          body.angVel += 5.0f*frand_unit();
-        }
-Nothing too complicated there. We just add a random change to the body's velocity and another random change to it's angular velocity.
+	body.angVel += 5.0f*frand_unit();
+}
+```
 
-#Closing Thoughts:
+没什么太复杂的内容。我们只是为刚体的速度和角速度添加了一个随机的改变。
 
-Now that you've seen how easy and powerful Objective-Chipmunk can be, why not integrate it into your iPhone game? The Objective-C API will save you time (and money) by providing you a high level API that works well with popular iPhone libraries such as Cocos2D. You'll also spend less time worrying about memory management as it allows you to manage your Chipmunk memory just like the rest of your iPhone app.
+#结束语：
 
-Happy Chipmunking!
+既然你瞧见了Objective-Chipmunk是多么容易并且强大，何不将它集成到你的iPhone游戏里面呢？Objective-C API提供的与流行iPhone库如Cocos2D协同良好的高层次API，将会为你省去不少时间（和金钱）。同样你也不必为内存管理担心因为它允许你像你的其他iPhoneApp一样来管理Chipmunk内存。
+
+开心的玩转Chipmunk吧！
 
