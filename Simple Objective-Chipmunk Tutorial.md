@@ -3,48 +3,95 @@
 
 
 This tutorial aims to be a bare-bones introduction to using Objective-Chipmunk in an iPhone game. It is very heavily commented and should be easy to follow. Despite containing only 100 or so actual lines of code, it squeezes in an overview of a number of topics:
+    
+    翻译：本教程的目标是在iPhone游戏中简单介绍使用Objective-Chipmunk.关于它you有大量的评论并且很容易理解。尽管实际上仅有约100行代码，它镶嵌在下面的主题概述中：
 
-Creating a Chipmunk space to simulate objects in it
-Creating a bouncing box with friction
-Controlling gravity using the device's tilt
+Creating a Chipmunk space to simulate objects in it  
+    
+    创建一个Chipmunk空间模拟对象
+
+Creating a bouncing box with friction    
+
+    创建一个含有摩擦属性的弹性刚体
+
+Controlling gravity using the device's tilt     
+    
+    使用装置的倾斜控制重力
+
 Using collision callbacks to make impact sounds based on how hard objects collide
+    
+    根据碰撞力度决定碰撞声音的大小
+    
 Using collision callbacks to track if an object is sitting on the ground or in the air
+
+    使用碰撞回调来追踪物体是否坐在地上还是在空中
+    
 Using the ChipmunkObject protocol to easily add complex objects to a space
+    
+    使用ChipmunkObject协议很容易把一个复杂的对象加到一个空间
+
 Using a CADisplayLink for smooth animation
+    
+    使用一个平滑的CADisplayLink动画
 Integrating Chipmunk into a Cocoa Touch UI
+    
+    整合CHipmunk到Cocoa UI触摸界面
 Even if you are just going to use the vanilla C API, this tutorial serves as a nice introduction to Chipmunk on the iPhone.
+    
+    计时你只会使用vanilla C API，在iphone上本教程对Chipmunk是一个不错的介绍说明。
 
 You can download this tutorial and all the project files from the GitHub page. These are ready to build!
 
+    你可以下载本教程以及所有在GitHub网站上的工程文件。他们都是可以编译的！
 #What Do I Need to Know First?
 
 This is a pretty basic tutorial, but it does not explain Objective-C memory management or the Cocoa Touch APIs. You'll have to know at least a little about them or be willing to look them up in Apple docs to follow along.
+
+    这是个很棒的基础教程，但是不解释object-c内存管理以及Cocoa触摸APIs。你至少需要对它们有点了解或者去看在苹果官方文档。
 
 #What is Chipmunk?
 
 Chipmunk is a 2D rigid body physics library distributed under the MIT license. It is intended to be fast, portable, numerically stable, and easy to use. For this reason it's been used in hundreds of games on just about every system you could name. This includes top quality titles such as Night Sky for the Wii and many #1 sellers on the iPhone App Store! I've put thousands of hours of work over many years to make Chipmunk what it is today. Check out Chipmunk's website for more information.
 
+    Chipmunk是一个2D刚体物理引擎库，遵守MIT协议。它被设计更快，更稳定，使用更简单。正是因此几乎每一个你说得来系统都有数以百计的游戏使用它。在苹果app store上高质量的游戏包括Night Sky for the Wii 和 many #1 sellers。这么多年我花费了数千小时才做到今天的Chipmunk。更多信息请查阅Chipmunk的网站。
+
 #What is Objective-Chipmunk:
 
 Objective-Chipmunk is an Objective-C wrapper for the Chipmunk Physics Library. While Chipmunk's C API is pretty easy to use, the Objective-C API is even better. The primary advantages of a native Objective-C API include integrating with the Cocoa memory management model and the Chipmunk Object protocol. The Chipmunk Object protocol unifies the basic Chipmunk types as well as making it easy to create custom composite collections of the basic types. Additionally, the wrapper adds many convenience methods for doing common setup tasks as well as helper methods that integrate it with the rest of the Cocoa Touch API. The wrapper tries to do things the Objective-C way, adding useful method variations where it makes sense to do so.
 
+    Objective-Chipmunk是objective-c包括的一个Chipmunk物理引擎库。虽然Chipmu的c API很容就可以使用，但是objective-c  API更加方便快捷。本地objective-c API的主要优势包括集成与Cocoa内存管理模型和Chipmunk对象协议。Chipmunk Object协议统一了基础Chipmunk类型，使得它很容易创建自定义的基础类型类型。另外，包装中添加了很多便捷的方法来执行场景的安装任务，以及整合的Cocoa Touch API辅助方法。该包装尝试完成object-c的方式，添加更加有意义的方法变量等。
+
 You can find out more information on Objective-Chipmunk's webpage. While Objective-Chipmunk is not free like Chipmunk is, the enhanced API will almost certainly save you time and money. You'll also be helping to support further Chipmunk development!
+
+    在Objective-Chipmunk的网站上查阅更多信息。虽然Object-Chipmunk不是免费得，但是增加的API肯定会为你节约时间和成本。同时你也将帮助支持Chipmunk的发展！
 
 #Why are you using Cocoa Touch classes for a game tutorial?
 
 Cocoa Touch actually works great for prototyping an iPhone game quickly. It's reasonably fast because it's hardware accelerated, and doesn't seem to slow down too much until you have a few dozen objects on the screen. Interface Builder makes a decent bare bones level editor as well. We've written several contract mini-games this way and it saved a lot of headaches dealing with libraries and dependencies. Given the simplicity of the games, using anything fancier would have been a waste of time.
 
+    Cocoa Touch 实际上能够快速开发一款iPhone 游戏。相当快，因为硬件加速，同时在屏幕上有许多对象也不会慢。Interface Builder也是一款简要的编辑器。我们用这个方式写了多款小游戏，并且让我们避免处理库的依耐性的麻烦。结合游戏的简洁性，使用任何华丽的空想都将是浪费时间。
+
 We have more example code available on the Chipmunk downloads page including Cocos2D examples.
 
+    在Chipmunk下载页中，我们有更多可运行的例子包括Cocos2D实例。
+    
 ##Let's get started!
 
 A very valid question of many Chipmunk beginners is how to structure their game to take advantage of Chipmunk. A lot of people try to build their game around Chipmunk, but this isn't a very good idea. Chipmunk is not meant to be a game engine. It doesn't render any graphics, and you can't get a list of all the bullets or monsters currently in the scene.
 
+    许多Chipmunk初学者有个疑问：那就是如何使用Chipmunk构造他们的游戏。很多人使用Chipmunk尝试建立他们的游戏，但是这并不是好的主意。Chipmunk不是一个游戏引擎。他不显示图像，你也不能在场景里获得所有子弹和怪物。 
+
 To use Chipmunk, you should treat it as a component. When you add a game object to your game scene, add it's physics objects to the Chipmunk space you created for that scene. As you will see in this tutorial, the ChipmunkObject protocol is easy to implement, but makes it trivial to add and remove entire game objects from a Chipmunk space with a single method call. When you want to render a sprite, you can get read it's position and rotation from the Chipmunk object it is linked to. This is sort of an MVC approach applied to games, and it works quite well.
+
+    如果要使用Chipmunk，你应该把它作为一个组件。当你在你的游戏场景里添加游戏对象时，在你创建的场景里添加物理对象到Chipmunk空间里。本教程你可以看到，Chipmunk Object协议很容易实现，但是通过调用单个方法，可以对Chipmunk世界里的组件添加和删除。当你想显示一个精灵，你可以通过Chipmunk Object读取精灵的位置和旋转角度。这就是MVC应用于游戏的缩影，并且使用的非常好。
 
 A lot of people do this the other way around. They loop over all the collision shapes in Chipmunk and update the sprite that it is associated with. While this works, it's not very flexible. It means that each collision shape has exactly one sprite associated with it and vice versa. Furthermore, the API to iterate the shapes in a Chipmunk space is not part of the public documented API so I wouldn't recommend using it.
 
+    很多人反其道而行。他们通过遍历所有的碰撞并且更新相关的精灵。这样的工作模式，是不灵活的。它意味着每次碰撞只有一个精灵关联，反之亦然。此外，API迭代Chipmunk世界的形状不是公共明确的API的一部分，所以我不推荐使用它。
+
 The goal is to make a box that we can move around the screen by tilting the iPhone or tapping on the box. Going a bit further, we'll also use collision callbacks to change the screen color and play impact sounds. There are basically 2 classes: ViewContoller which we are using like a game controller, and FallingButton which we are using like a game object controller.
+
+    主要的目地就是在屏幕内完成一个可以通过倾斜iphone或者触摸移动的刚体。说白了我们通过碰撞回调方法来改变屏幕的颜色并且播放相应的音效。这里有基础的2个类：我们喜欢用的一个游戏控制器:ViewContoller，和我们喜欢的用的游戏对象控制器:FallingButton。
 
 --- 夜狼 ---
 #ViewController.m - A Bare Bones Game Controller
