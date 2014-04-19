@@ -1,293 +1,286 @@
------  E.Y -----
-#Simple Objective-Chipmunk Tutorial:
+#简易Objective-Chipmunk教程:
 
-
-This tutorial aims to be a bare-bones introduction to using Objective-Chipmunk in an iPhone game. It is very heavily commented and should be easy to follow. Despite containing only 100 or so actual lines of code, it squeezes in an overview of a number of topics:
+本教程的目标是简单的介绍下在iPhone游戏中使用Objective-Chipmunk。其中有很多注释，理解起来很容易。尽管代码只有100行左右，但我会从下面几个主题展开：
     
-    翻译：本教程的目标是在iPhone游戏中简单介绍使用Objective-Chipmunk.关于它you有大量的评论并且很容易理解。尽管实际上仅有约100行代码，它镶嵌在下面的主题概述中：
+-  创建一个Chipmunk空间模拟对象
+-  创建一个具有摩擦力的弹性盒子  
+-  通过倾斜设备来控制重力
+-  使用碰撞回调来实现基于物体碰撞力度的声音大小
+-  根据碰撞回调来追踪物体处于地面还是空中    
+-  使用ChipmunkObject protocol来轻松的将复杂对象加入到空间中
+-  使用CADisplayLink实现平滑动画
+-  整合Chipmunk进CocoaTouch UI
 
-Creating a Chipmunk space to simulate objects in it  
+即使你打算只是用vanilla C API, 本教程也可当作一篇Chipmunk在iPhone上使用的不错的介绍。 
+
+你可以在[GitHub网站](https://github.com/andykorth/SimpleObjectiveChipmunkTutorial)上下载本教程以及所有的工程文件。他们都是可以编译的！
+
+## 我首先该了解什么呢？
+
+这是一篇很棒的基础教程，但是并不打算介绍Objective-C内存管理或者Cocoa触摸API。你至少需要对他们有一些了解或者愿意查看苹果官方文档。
+
+## Chipmunk是什么？
+
+Chipmunk2D是一个基于MIT协议的2D刚体物理仿真库。设计宗旨:极快、可移植、稳定、易用。出于这个原因，它已经被用于数以百计的游戏，而且几乎横跨了所有系统。这些游戏包括了iPhoneAppStore上一些顶级出色的TOP1游戏，如Night Sky等。这几年来，我投入了大量的时间来发展Chipmunk，才使得Chipmunk走到今天。更多信息请查阅[Chipmunk官网](http://chipmunk-physics.net/)。
+
+## Objective-Chipmunk是什么？
+
+Objective-Chipmunk是Objective-C对Chipmunk物理引擎库的封装。虽然Chipmunk的C API非常容易使用，但Objective-C API更棒。原生Objective-C API的主要优点包括集成了Cocoa内存管理模型和ChipmunkObject协议。Chipmunk对象协议统一了Chipmunk的基本类型。另外该封装增加了许多便利的方法来执行常见的安装任务，以及整合了Cocoa Touch API辅助方法。封装会尽量按照Objective-C的方式来实现，并在一些需要的地方添加一些有用的方法变量。
+
+Chipmunk Object协议统一了基础Chipmunk类型，使得它很容易创建自定义的基础类型类型。另外，包装中添加了很多便捷的方法来执行场景的安装任务，。该包装尝试完成object-c的方式，添加更加有意义的方法变量等。
+
+你可以在[Objective-Chipmunk网站](http://howlingmoonsoftware.com/objectiveChipmunk.php)上查阅更多信息。虽然Objective-Chipmunk并不免费，但是增强的API肯定会为你节约时间和成本。同时你也将会支持Chipmunk的发展！
+
+## 为什么使用CocoaTouch类实现教程
+
+Cocoa Touch 实际上能够快速开发一款iPhone 游戏。因为硬件加速的原因会相当快，同时在屏幕上有许多对象也不会慢。Interface Builder也是一款简要的编辑器。我们用这个方式写了多款小游戏，并且让我们避免处理库的依耐性的麻烦。结合游戏的简洁性，使用任何华丽的空想都将是浪费时间。
+
+在[Chipmunk下载页](http://chipmunk-physics.net/documentation.php)中，我们有更多可运行的例子包括Cocos2D实例。
     
-    创建一个Chipmunk空间模拟对象
+# 让我们开始吧!
 
-Creating a bouncing box with friction    
+许多Chipmunk初学者有个疑问，就是如何利用Chipmunk的优势来构建他们的游戏。很多人尝试使用Chipmunk来建立他们的游戏，但这并不是好的主意。Chipmunk不是一个游戏引擎。它不显示图像，你也不能获得场景里的所有子弹和怪物。 
 
-    创建一个含有摩擦属性的弹性刚体
+如果要使用Chipmunk，你应该把它作为一个组件。当你在游戏场景里添加游戏对象时，在你创建的场景里添加物理对象到Chipmunk空间里。本教程你可以看到，Chipmunk Object协议很容易实现，但是通过调用单个方法，可以对Chipmunk世界里的组件添加和删除。当你想显示一个精灵，你可以通过Chipmunk Object读取精灵的位置和旋转角度。这就是MVC应用于游戏的缩影，并且使用的非常好。
 
-Controlling gravity using the device's tilt     
-    
-    使用装置的倾斜控制重力
+很多人反其道而行。他们通过遍历所有的碰撞并且更新相关的精灵。这样的工作模式，是不灵活的。它意味着每次碰撞只有一个精灵关联，反之亦然。此外，API迭代Chipmunk世界的形状不是公共明确的API的一部分，所以我不推荐使用它。
 
-Using collision callbacks to make impact sounds based on how hard objects collide
-    
-    根据碰撞力度决定碰撞声音的大小
-    
-Using collision callbacks to track if an object is sitting on the ground or in the air
+主要的目地就是在屏幕内完成一个可以通过倾斜iphone或者触摸移动的刚体。说白了我们通过碰撞回调方法来改变屏幕的颜色并且播放相应的音效。这里有两个基础类：我们喜欢用的一个游戏控制器:ViewContoller，以及游戏对象控制器:FallingButton。
 
-    使用碰撞回调来追踪物体是否坐在地上还是在空中
-    
-Using the ChipmunkObject protocol to easily add complex objects to a space
-    
-    使用ChipmunkObject协议很容易把一个复杂的对象加到一个空间
 
-Using a CADisplayLink for smooth animation
-    
-    使用一个平滑的CADisplayLink动画
-Integrating Chipmunk into a Cocoa Touch UI
-    
-    整合CHipmunk到Cocoa UI触摸界面
-Even if you are just going to use the vanilla C API, this tutorial serves as a nice introduction to Chipmunk on the iPhone.
-    
-    计时你只会使用vanilla C API，在iphone上本教程对Chipmunk是一个不错的介绍说明。
+## ViewController.m - 简单的游戏控制器
 
-You can download this tutorial and all the project files from the GitHub page. These are ready to build!
+游戏控制器要负责很多事情， 一个游戏控制器最主要的是控制整个游戏的逻辑， 判定玩家什么时候赢什么时候输这类的事情。 我们简单的例子里面并没有任何规则， 所以我们直接跳到其它需要负责的方面：管理游戏循环和处理添加删除游戏对象
 
-    你可以下载本教程以及所有在GitHub网站上的工程文件。他们都是可以编译的！
-#What Do I Need to Know First?
+### 初始化设置：
 
-This is a pretty basic tutorial, but it does not explain Objective-C memory management or the Cocoa Touch APIs. You'll have to know at least a little about them or be willing to look them up in Apple docs to follow along.
+我们用UIViewController来创建游戏的控制器(controller),来一起看一下在viewDidLoad函数中初始化的时候都做了什么，我将一行一行的进行解释
 
-    这是个很棒的基础教程，但是不解释object-c内存管理以及Cocoa触摸APIs。你至少需要对它们有点了解或者去看在苹果官方文档。
+首先我们需要初始化图像和物理属性，我们要把这些卸载一个view controller里面， 我们可以仅用view来进行图像显示，所以我们只需要调用父类的viewDidLoad方法就可以完成初始化了。
 
-#What is Chipmunk?
+```
+[super viewDidLoad];
+```
+现在我们就可以把他们添加进来显示在界面上了，相当easy。
 
-Chipmunk is a 2D rigid body physics library distributed under the MIT license. It is intended to be fast, portable, numerically stable, and easy to use. For this reason it's been used in hundreds of games on just about every system you could name. This includes top quality titles such as Night Sky for the Wii and many #1 sellers on the iPhone App Store! I've put thousands of hours of work over many years to make Chipmunk what it is today. Check out Chipmunk's website for more information.
+### 初始化物理状态也简单:
 
-    Chipmunk是一个2D刚体物理引擎库，遵守MIT协议。它被设计更快，更稳定，使用更简单。正是因此几乎每一个你说得来系统都有数以百计的游戏使用它。在苹果app store上高质量的游戏包括Night Sky for the Wii 和 many #1 sellers。这么多年我花费了数千小时才做到今天的Chipmunk。更多信息请查阅Chipmunk的网站。
+```
+space = [[ChipmunkSpace alloc] init];
+```
+现在，这个space对象里面什么也没有。我们添加的任何物理对象都会飞出屏幕之外。一般使用物理引擎的2D的项目都会在开始的时候设置屏幕的边界，Objective-Chipmunk也有一个很好的简便方法来实现。
 
-#What is Objective-Chipmunk:
+```
+[space addBounds:self.view.bounds
+       thickness:10.0f
+       elasticity:1.0f friction:1.0f
+       layers:CP_ALL_LAYERS group:CP_NO_GROUP
+       collisionType:borderType
+];
+```
 
-Objective-Chipmunk is an Objective-C wrapper for the Chipmunk Physics Library. While Chipmunk's C API is pretty easy to use, the Objective-C API is even better. The primary advantages of a native Objective-C API include integrating with the Cocoa memory management model and the Chipmunk Object protocol. The Chipmunk Object protocol unifies the basic Chipmunk types as well as making it easy to create custom composite collections of the basic types. Additionally, the wrapper adds many convenience methods for doing common setup tasks as well as helper methods that integrate it with the rest of the Cocoa Touch API. The wrapper tries to do things the Objective-C way, adding useful method variations where it makes sense to do so.
+`thickness`控制着边界的厚度，`layers`和`group`控制碰撞过滤和碰撞。更多信息请查看[碰撞形状](http://files.slembcke.net/chipmunk/release/ChipmunkLatest-Docs/#cpShape)文档。
+最后再说一下`borderType`是一个当定义了碰撞回调函数时的标记的对象，比如你想在子弹击中怪物的时候进行碰撞处理，碰撞的对象可以是任何对象，类的对象或者全局NSString都可以，我的borderType就是一个在头文件里面定义的全局NSString变量。
 
-    Objective-Chipmunk是objective-c包括的一个Chipmunk物理引擎库。虽然Chipmu的c API很容就可以使用，但是objective-c  API更加方便快捷。本地objective-c API的主要优势包括集成与Cocoa内存管理模型和Chipmunk对象协议。Chipmunk Object协议统一了基础Chipmunk类型，使得它很容易创建自定义的基础类型类型。另外，包装中添加了很多便捷的方法来执行场景的安装任务，以及整合的Cocoa Touch API辅助方法。该包装尝试完成object-c的方式，添加更加有意义的方法变量等。
+接下来我们设置一下物体碰到界面边界的时候的响应函数。
 
-You can find out more information on Objective-Chipmunk's webpage. While Objective-Chipmunk is not free like Chipmunk is, the enhanced API will almost certainly save you time and money. You'll also be helping to support further Chipmunk development!
-
-    在Objective-Chipmunk的网站上查阅更多信息。虽然Object-Chipmunk不是免费得，但是增加的API肯定会为你节约时间和成本。同时你也将帮助支持Chipmunk的发展！
-
-#Why are you using Cocoa Touch classes for a game tutorial?
-
-Cocoa Touch actually works great for prototyping an iPhone game quickly. It's reasonably fast because it's hardware accelerated, and doesn't seem to slow down too much until you have a few dozen objects on the screen. Interface Builder makes a decent bare bones level editor as well. We've written several contract mini-games this way and it saved a lot of headaches dealing with libraries and dependencies. Given the simplicity of the games, using anything fancier would have been a waste of time.
-
-    Cocoa Touch 实际上能够快速开发一款iPhone 游戏。相当快，因为硬件加速，同时在屏幕上有许多对象也不会慢。Interface Builder也是一款简要的编辑器。我们用这个方式写了多款小游戏，并且让我们避免处理库的依耐性的麻烦。结合游戏的简洁性，使用任何华丽的空想都将是浪费时间。
-
-We have more example code available on the Chipmunk downloads page including Cocos2D examples.
-
-    在Chipmunk下载页中，我们有更多可运行的例子包括Cocos2D实例。
-    
-##Let's get started!
-
-A very valid question of many Chipmunk beginners is how to structure their game to take advantage of Chipmunk. A lot of people try to build their game around Chipmunk, but this isn't a very good idea. Chipmunk is not meant to be a game engine. It doesn't render any graphics, and you can't get a list of all the bullets or monsters currently in the scene.
-
-    许多Chipmunk初学者有个疑问：那就是如何使用Chipmunk构造他们的游戏。很多人使用Chipmunk尝试建立他们的游戏，但是这并不是好的主意。Chipmunk不是一个游戏引擎。他不显示图像，你也不能在场景里获得所有子弹和怪物。 
-
-To use Chipmunk, you should treat it as a component. When you add a game object to your game scene, add it's physics objects to the Chipmunk space you created for that scene. As you will see in this tutorial, the ChipmunkObject protocol is easy to implement, but makes it trivial to add and remove entire game objects from a Chipmunk space with a single method call. When you want to render a sprite, you can get read it's position and rotation from the Chipmunk object it is linked to. This is sort of an MVC approach applied to games, and it works quite well.
-
-    如果要使用Chipmunk，你应该把它作为一个组件。当你在你的游戏场景里添加游戏对象时，在你创建的场景里添加物理对象到Chipmunk空间里。本教程你可以看到，Chipmunk Object协议很容易实现，但是通过调用单个方法，可以对Chipmunk世界里的组件添加和删除。当你想显示一个精灵，你可以通过Chipmunk Object读取精灵的位置和旋转角度。这就是MVC应用于游戏的缩影，并且使用的非常好。
-
-A lot of people do this the other way around. They loop over all the collision shapes in Chipmunk and update the sprite that it is associated with. While this works, it's not very flexible. It means that each collision shape has exactly one sprite associated with it and vice versa. Furthermore, the API to iterate the shapes in a Chipmunk space is not part of the public documented API so I wouldn't recommend using it.
-
-    很多人反其道而行。他们通过遍历所有的碰撞并且更新相关的精灵。这样的工作模式，是不灵活的。它意味着每次碰撞只有一个精灵关联，反之亦然。此外，API迭代Chipmunk世界的形状不是公共明确的API的一部分，所以我不推荐使用它。
-
-The goal is to make a box that we can move around the screen by tilting the iPhone or tapping on the box. Going a bit further, we'll also use collision callbacks to change the screen color and play impact sounds. There are basically 2 classes: ViewContoller which we are using like a game controller, and FallingButton which we are using like a game object controller.
-
-    主要的目地就是在屏幕内完成一个可以通过倾斜iphone或者触摸移动的刚体。说白了我们通过碰撞回调方法来改变屏幕的颜色并且播放相应的音效。这里有基础的2个类：我们喜欢用的一个游戏控制器:ViewContoller，和我们喜欢的用的游戏对象控制器:FallingButton。
-
---- 夜狼 ---
-#ViewController.m - A Bare Bones Game Controller
-
-A game controller is responsible for for a couple of things. A game controller's main responsibility is to control the game's logic, to decide when the player wins or loses, that sort of thing. Our simple example doesn't really have any rules, so we'll skip straight to it's other responsibilities: managing the game loop and handling adding and removing game objects.
-
-###Initialization and Setup:
-
-We're building our game controller as a UIViewController, so let's take a look at the viewDidLoad method where the initialization happens. We'll go through it line by line.
-
-First we need to initialize the graphics and the physics. Because we are writing this as a view controller, we can just use the view for graphics. All we need to do to set that up is call the viewDidLoad method in the super class:
-
-      [super viewDidLoad];
-      
-Now we can add subviews to self.view and they will simply show up on the screen. That was easy.
-
-###Initializing the physics is just as easy:
-
-      space = [[ChipmunkSpace alloc] init];
-      
-The space is completely empty at this point. Anything other physics objects we add can simply fly off the screen if they wanted to. The first thing that a lot of 2D physics games do is to create a box around the screen. Objective-Chipmunk actually has a nice convenience method for that.
-
-      [space addBounds:self.view.bounds
-        thickness:10.0f
-        elasticity:1.0f friction:1.0f
-        layers:CP_ALL_LAYERS group:CP_NO_GROUP
-        collisionType:borderType
-      ];
-thickness controls how thick the border is, layers and group control filtering of collisions. See the documentation on collision shapes for more information. Lastly, borderType is an object that we use as a key when defining collision callbacks. This lets you create a collision callback that is only called when a bullet hits a monster for example. The collision type can be any object. Class objects and global NSString objects work well as collision types as they are easy to get to. In this case, borderType was simply a global NSString that I defined at the top of the file.
-
-Next we'll set up a collision callback to respond to collision events when the box touches the screen border.
-
-      [space addCollisionHandler:self
+```
+[space addCollisionHandler:self
         typeA:[FallingButton class] typeB:borderType
         begin:@selector(beginCollision:space:)
         preSolve:nil
         postSolve:@selector(postSolveCollision:space:)
         separate:@selector(separateCollision:space:)
-      ];
-There are 4 collision events that are sent to a collision handler. You only have to implement the ones that you are interested in. In this case, we want to know when shapes shapes start touching, when Chipmunk has resolved the collision, and when they stop touching. You can find out more from thecallback documentation. Also, the methods are only called when two shapes tagged with [FallingButton class] and borderType collide.
+];
+```
+总共有4种碰撞事件，你只需要找到一个感兴趣的实现就可以了，如果想知道什么时候两个物体碰撞、什么时候Chipmunk处理碰撞、什么时候结束碰撞 这些都可以通过查阅文档来了解
 
-Lastly, we'll create the falling button game object and add it's view to the scene and add it's physics objects to the Chipmunk space.
+最后我们来创建一个掉落按钮的游戏对象，让它在view中显示，把它的物理属性添加到Chipmunk的space中
+。
 
-      fallingButton = [[FallingButton alloc] init];
-      [self.view addSubview:fallingButton.button];
-      [space add:fallingButton];
+```
+fallingButton = [[FallingButton alloc] init];
+[self.view addSubview:fallingButton.button];
+[space add:fallingButton];
+```
       
-Because FallingButton implements the ChipmunkObject protocol, we can add (or remove) all of it's rigid bodies, collision shapes and joints to the space in a single method call no matter how complex it's physics are.
+因为FallingButton实现了ChipmunkObject协议，我们就可以直接添加或者删除它的所有刚体，形状(shapes)和关节(joints)的碰撞都是在同一个函数里面处理的，所以不需要考虑它的物理属性有多负载
 
-That's it for the game controller initialization. Let's look at all the code together.
+这就是游戏controller的初始化，我们一起来看一下代码。
 
+```
 static NSString *borderType = @"borderType";
         
-        - (void)viewDidLoad {
-          [super viewDidLoad];
+- (void)viewDidLoad {
+	[super viewDidLoad];
           
-          space = [[ChipmunkSpace alloc] init];
-          [space addBounds:self.view.bounds
-            thickness:10.0f
-            elasticity:1.0f friction:1.0f
-            layers:CP_ALL_LAYERS group:CP_NO_GROUP
-            collisionType:borderType
-          ];
+	space = [[ChipmunkSpace alloc] init];
+	[space addBounds:self.view.bounds
+		thickness:10.0f
+		elasticity:1.0f friction:1.0f
+		layers:CP_ALL_LAYERS group:CP_NO_GROUP
+		collisionType:borderType
+	];
           
-          [space addCollisionHandler:self
-            typeA:[FallingButton class] typeB:borderType
-            begin:@selector(beginCollision:space:)
-            preSolve:nil
-            postSolve:@selector(postSolveCollision:space:)
-            separate:@selector(separateCollision:space:)
-          ];
+	[space addCollisionHandler:self
+		typeA:[FallingButton class] typeB:borderType
+		begin:@selector(beginCollision:space:)
+		preSolve:nil
+		postSolve:@selector(postSolveCollision:space:)
+		separate:@selector(separateCollision:space:)
+	];
           
-          fallingButton = [[FallingButton alloc] init];
-          [self.view addSubview:fallingButton.button];
-          [space add:fallingButton];
-        }
+	fallingButton = [[FallingButton alloc] init];
+	[self.view addSubview:fallingButton.button];
+	[space add:fallingButton];
+}
+```
         
-##The Game Loop: Updating the Physics and Graphics
+### 游戏主循环:更新刚体和图像
 
-So now we get to the meat of what the game controller does. Controlling the game's update loop. This tutorial uses a CADisplayLink to receive events from the iPhone OS when the screen wants to redraw itself. This is the easiest way to get smooth animation that I know of. Let's create a display link callback and an accelerometer callback quick:
+现在我们来看一下游戏的控制器（controller）都干了些什么，控制整个游戏的更新（update）循环。在这本节教程中用CADisplayLink来接收iPhone在屏幕重画是触发的事件，这是我知道的最简单的得到很流畅的动画的方式，让我们来快速的创建一个连接显示和加速（accelerometer）的回调函数：
 
-        - (void)viewDidAppear:(BOOL)animated {
-          displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(update)];
-          displayLink.frameInterval = 1;
-          [displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+```
+- (void)viewDidAppear:(BOOL)animated {
+	displayLink = [CADisplayLink displayLinkWithTarget:self
+selector:@selector(update)];
+	displayLink.frameInterval = 1;
+	[displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
           
-          UIAccelerometer *accel = [UIAccelerometer sharedAccelerometer];
-          accel.updateInterval = 1.0f/30.0f;
-          accel.delegate = self;
-        }
+	UIAccelerometer *accel = [UIAccelerometer sharedAccelerometer];
+	accel.updateInterval = 1.0f/30.0f;
+	accel.delegate = self;
+}
+```        
         
-These are Apple's classes, so I won't go into too much detail here.
+这是一个很普通的Apple类，所以我就不进行详细的解释了。
 
-Next we'll create the update method for the display link to call.
-        
-        - (void)update {
-          cpFloat dt = displayLink.duration*displayLink.frameInterval;
-          [space step:dt];
+接下来我们要创建一个让displayLink调用的update方法
+
+```
+- (void)update {
+	cpFloat dt = displayLink.duration*displayLink.frameInterval;
+	[space step:dt];
           
-          [fallingButton updatePosition];
-        }
+	[fallingButton updatePosition];
+}
+```        
         
-This simply uses the timing information from the display link to figure out the amount of time passed since the last time the method was called (dt). We can then step (update) the physics simulation using that time. After the simulation has been updated, we update the falling button object so it's view lines up with the physics.
+只是简单的定时得到显示连接来计算距离上一次函数调用的时间，我们可以使用同样的间隔时间更新物理引擎，在物理引擎更新完成之后，更新falling button的位置(显示的图片根据物理属性的位置进行调整)
 
-One thing to note here is that Chipmunk prefers it when you use the same dt each time you step the simulation. It's not required, but it will allow you to reduce the CPU usage significantly as well as making your game deterministic.
+有一点需要说明一下，Chipmunk不需要随时保持一致，这样可以降低你的CPU的使用次数，而且让你的游戏更为准确
 
-Next we'll define the accelerometer callback so that we can update gravity to respect the tilt of the iPhone.
+然后我们创建一个accelerometer回调函数用来在iPhone倾斜的时候更新重力方向。
 
-        - (void)accelerometer:(UIAccelerometer *)accelerometer didAccelerate:(UIAcceleration *)accel {
-          space.gravity = cpvmult(cpv(accel.x, -accel.y), 100.0f);
-        }
+```
+- (void)accelerometer:(UIAccelerometer *)accelerometer didAccelerate:(UIAcceleration *)accel {
+	space.gravity = cpvmult(cpv(accel.x, -accel.y), 100.0f);
+}
+```
         
-Pretty easy. One thing to note is that all of the cpv*() functions are operators for Chipmunk vectors. cpv() creates a new vector from an x and y value, and cpvmult() multiplies a vector by a length. Seeing vector math done this way might take some getting used to. See the cpVect C docs for more information. If you are using Objective-C++ you can easily define overloaded operators for Chipmunk.
+相当简单，解释一下cpv这个函数，它的功能是根据x和y坐标创建一个Chipmunk中的一个向量，cpvmult()方法是创建一个单位向量，想要知道更多关于向量的信息可以自己去查阅文档，如果你是在使用Objectiv-C++就可以很容易的重载Chipmunk的运算符了。
 
-##Collision Callbacks: begin
+### 碰撞的回调函数:begin
 
-Different collision callback types have slightly different method signatures. The begin callback method should look something like this:
+不同的碰撞回调类型对应不同的方法签名，begin回调方法可以写成像下面这样：
 
-        - (bool)beginCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space
+```
+- (bool)beginCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space
+```
 
-The first argument is a pointer to a C cpArbiter struct. The word arbiter means a judge that resolves a dispute. Because collision callbacks are trigger so often, I chose not to create a temporary Objective-C object to wrap the arbiter. Fortunately, there are only a few things you need to interact with cpArbiter structs for. For more information on arbiters, see the cpArbiter C docs.
+第一个参数是一个指向cpArbiter结构体的指针，arbiter这个词在这里的意思是仲裁者，由于很容易会触发碰撞，所以我决定不创建一个Objective-C的类来封装arbiter，我们很少会用到cpArbiter的结构体，想要知道更多关于cpArbiter可以查阅[cpArbiter C 文档](http://files.slembcke.net/chipmunk/release/ChipmunkLatest-Docs/#cpArbiter)。
 
-The second argument is the ChipmunkSpace object that the callback was registered on. That way you can do things like register post-step (different than a post-solve callback) callbacks that add or remove objects from the space.
+第二个参数是回调注册所在的ChipmunkSpace空间对象。这样你可以注册post-step回调（和post-solve回调不同）来向空间中添加或者删除对象。
 
-The first thing you probably want to do in a collision callback is probably to find out which two shapes collided. If you remember from earlier, we define our collision handler to be called when shapes with two specific collision types collided. So how do you figure out which object is which? Objective-Chipmunk provides a handy macro to define the ChipmunkShape variables as well as initialize them for you.
+可能你首先想在碰撞的回调函数里面做的事是找出来到底是哪两个物体碰撞了，如果你还记得以前说过的东西，当空间中两个特定碰撞类型的物体碰撞时，我们定义来碰撞处理函数。那么我们该如何知道哪个对象是哪个呢？Objective-Chipmunk提供来一个处理宏来定义ChipmunkSpace变量以及初始化他们。
 
-         CHIPMUNK_ARBITER_GET_SHAPES(arbiter, buttonShape, border);
-         
-That macro is equivalent to doing something like this:
+```
+CHIPMUNK_ARBITER_GET_SHAPES(arbiter, buttonShape, border);
+```
 
-          ChipmunkShape *buttonShape = GetShapeWithTypeA(arbiter);
-          ChipmunkShape *border = GetShapeWithTypeB(arbiter);
+这个宏相当于做了这样的事：   
 
-Where type A and type B are the same as the types you gave to the space when you defined the collision handler.
+```
+ChipmunkShape *buttonShape = GetShapeWithTypeA(arbiter);
+ChipmunkShape *border = GetShapeWithTypeB(arbiter);
+```
+typeA和typeB和你定义碰撞处理函数的定义的type一样。
 
-A common thing that games need to know is when an object is touching the ground. Using Chipmunk's collision events, we can easily track this using a counter. Increment the counter in your begin callbacks, and decrement it in the separate callbacks. If the counter is 0, then you know the shape isn't touching anything. Let's do that here.
+游戏中常常要知道物体是否已经接触来地面。使用Chipmunk的碰撞事件，我们可以很容易的通过一个计数器来实现。在begin回调中，增加计数器，并且在seperate回调中，减少计数器。如果计数器为0，则意味着物体不再接触任何东西。我们从这里开始。
 
-We have a problem though. The collision callback only gave us the colliding shape and not the game object it's for! Fortunately, Chipmunk provides data pointers on it's objects so that you can always get a reference to your game object from a rigid body, shape or joint. The data pointer is set by the FallingButton class when we create it. You'll see more about this later.
+我们一直有个问题，就是碰撞的回调函数只会给我们传过来碰撞的shape而不是它对应的游戏里面的对象！幸好。Chipmunk中提供了一个数据指针指向使用它的对象以便于你在任何时候都能通过刚体、shape或者关节来得到游戏中的对象，这个对象指针是在我们创建FallingButton对象的时候赋值的，后面你可以看到详细的解释。
 
-          FallingButton *fb = buttonShape.data;
+```
+FallingButton *fb = buttonShape.data;
+```
 
-So now we can use that to increment the counter on our falling button.
+那么现在我们增加以下我们掉落按钮的计数：
 
-          fb.touchedShapes++;
+```
+fb.touchedShapes++;
+```
+
+我们背景设置为灰色，以便于看清下降的按钮碰撞到的任何东西：
+
+```
+self.view.backgroundColor = [UIColor grayColor];
+```
+begin回调函数必须要返回一个boolean的值，如果返回true,那么Chipmunk会以正常的方式处理碰撞，如果返回false，那么Chipmunk会当做这个碰撞没有发生，这个在处理碰撞过滤的时候非常有用比如单向平台或易碎物体。如果我们只需要正常碰撞，将返回值设置为TRUE。做完这些事之后，我们也就完成了我们的begin会调函数:
+
+```
+- (bool)beginCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space {
+	CHIPMUNK_ARBITER_GET_SHAPES(arbiter, buttonShape, border);
+        
+	FallingButton *fb = buttonShape.data;
+	fb.touchedShapes++;
           
-Lastly, lets set the background color to gray when the falling button is touching anything so we can see it.
-
-          self.view.backgroundColor = [UIColor grayColor];
-
-Lastly, the begin callback must return a boolean. If it returns TRUE, then Chipmunk processes the collision normally. If it returns FALSE then Chipmunk ignores the collision as if it never happened. This is a powerful way to implement all sorts of conditional collision filtering such as one way platforms or breakable objects. We just want to process the collision normally, so we'll just return TRUE. Putting this all together, we have our finished begin callback method:
-
-        - (bool)beginCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space {
-          CHIPMUNK_ARBITER_GET_SHAPES(arbiter, buttonShape, border);
-        
-          FallingButton *fb = buttonShape.data;
-          fb.touchedShapes++;
+	self.view.backgroundColor = [UIColor grayColor];
           
-          self.view.backgroundColor = [UIColor grayColor];
-          
-          return TRUE;
-        }
-        
-#Collision Callbacks: separate
+	return TRUE;
+}
+```
 
-The separate callback has a slightly different method signature from the begin callback. Because the collision is already done by the time the separate callback is called, it doesn't return a boolean that controls whether to ignore the collision.
-        
-        - (void)separateCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space
+### 碰撞的回调函数:separate
+
+separate的回调方法和begin回调方法有些不一样，因为在调用separate回调函数的时候碰撞已经结束了，所以它不需要返回一个boolean类型来标识是否要忽略碰撞。
+
+```
+- (void)separateCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space
+```
  
-First we'll decrement the counter. This should all look familiar.
-        
-          CHIPMUNK_ARBITER_GET_SHAPES(arbiter, buttonShape, border);
-          
-          FallingButton *fb = buttonShape.data;
-          fb.touchedShapes--;
-          
-Now let's set the background color to a random color so you can see each time the box collides with the border. We only want to do this when the box is no longer touching any of the 4 border edges, so we check if the counter is 0 first.
+首先我们要减少计数，这个跟前面增加的差不多，很简单
 
-          if(fb.touchedShapes == 0){
-            self.view.backgroundColor = [UIColor colorWithRed:frand() green:frand() blue:frand() alpha:1.0f];
-          }
+```        
+CHIPMUNK_ARBITER_GET_SHAPES(arbiter, buttonShape, border);
           
-Putting this all together we have the finished separate callback:
-        
-        - (void)separateCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space {
-          CHIPMUNK_ARBITER_GET_SHAPES(arbiter, buttonShape, border);
+FallingButton *fb = buttonShape.data;
+fb.touchedShapes--;
+```
           
-          FallingButton *fb = buttonShape.data;
-          fb.touchedShapes--;
+接下来，我们将背景设置为随机的一种颜色以便于知道物体与边界发生了碰撞，我们只在物体不再与四个边界接触的时候这么做，所以，我们先检测一下计数是不是0
+
+```
+if(fb.touchedShapes == 0){
+	self.view.backgroundColor = [UIColor colorWithRed:frand() green:frand() blue:frand() alpha:1.0f];
+}
+```
           
-          if(fb.touchedShapes == 0){
-            self.view.backgroundColor = [UIColor colorWithRed:frand() green:frand() blue:frand() alpha:1.0f];
-          }
-        }
-        
------  wAe]ChildhoodAndy ------        
-#碰撞回调：post-solve
+做完这些我们的separate回调函数也就搞定了：
+
+```
+- (void)separateCollision:(cpArbiter*)arbiter space:(ChipmunkSpace*)space {
+	CHIPMUNK_ARBITER_GET_SHAPES(arbiter, buttonShape, border);
+          
+	FallingButton *fb = buttonShape.data;
+	fb.touchedShapes--;
+          
+	if(fb.touchedShapes == 0){
+		self.view.backgroundColor = [UIColor colorWithRed:frand() green:frand() blue:frand() alpha:1.0f];
+	}
+}
+```
+              
+### 碰撞回调：post-solve
 
 另一个很常见的回调处理就是播放碰撞声音了。为了让声音听起来自然，我们要基于物体撞击的力度来设置音量的大小。这便是post-solve回调要解决的问题。Chipmunk已经完成了碰撞解决，使得你有机会取得施加的冲力。
 
@@ -330,11 +323,11 @@ if(volume > 0.05f){
 ```
 上面基本就是游戏控制器了。
 
-#Falling Button:一个简单的游戏对象控制器
+## Falling Button:一个简单的游戏对象控制器
 
 和游戏控制器类似，游戏对象控制器的主要功能就是管理游戏对象的逻辑更新并将图形和物理两者做绑定。在这篇教程中，falling button的逻辑比较简单。我们所要做的就是点击它的时候让它向随机的方向移动。
 
-## 初始化设置：
+### 初始化设置：
 
 让我们从初始化开始来了解下游戏对象的组成。它由一个初始化的UIButton实例启动。下面是非常标准的Cocoa程序：
 
@@ -430,7 +423,7 @@ chipmunkObjects = [ChipmunkObjectFlatten(body, shape, nil) retain];
 }
 ```      
         
-#按钮动作:
+### 按钮动作:
 
 剩下唯一的事情就是处理点击按钮时所调用的方法了。
 
@@ -450,7 +443,7 @@ static cpFloat frand_unit(){return 2.0f*((cpFloat)rand()/(cpFloat)RAND_MAX) - 1.
 
 没什么太复杂的内容。我们只是为刚体的速度和角速度添加了一个随机的改变。
 
-#结束语：
+## 结束语：
 
 既然你瞧见了Objective-Chipmunk是多么容易并且强大，何不将它集成到你的iPhone游戏里面呢？Objective-C API提供的与流行iPhone库如Cocos2D协同良好的高层次API，将会为你省去不少时间（和金钱）。同样你也不必为内存管理担心因为它允许你像你的其他iPhoneApp一样来管理Chipmunk内存。
 
