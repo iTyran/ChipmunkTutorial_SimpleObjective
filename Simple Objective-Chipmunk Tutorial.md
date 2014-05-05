@@ -17,11 +17,11 @@
 
 ## 我首先该了解什么呢？
 
-这是一篇很棒的基础教程，但是并不打算介绍Objective-C内存管理或者Cocoa Touch API。你至少需要对他们有一些了解或者愿意查看苹果官方文档。
+这是一篇很棒的基础教程，但是并不打算介绍Objective-C内存管理或者Cocoa Touch APIs。你至少需要对他们有一些了解或者愿意查看苹果官方文档。
 
 ## Chipmunk是什么？
 
-Chipmunk2D是一个基于MIT协议的2D刚体物理仿真库。设计宗旨:极快、可移植、稳定、易用。出于这个原因，它已经被用于数以百计的游戏，而且几乎横跨了所有系统。这些游戏包括了iPhoneAppStore上一些顶级出色的TOP1游戏，如Night Sky等。这几年来，我投入了大量的时间来发展Chipmunk，才使得Chipmunk走到今天。更多信息请查阅[Chipmunk官网](http://chipmunk-physics.net/)。
+Chipmunk2D是一个基于MIT协议的2D刚体物理仿真库。设计宗旨:极快、可移植、稳定、易用。出于这个原因，它已经被用于数以百计的游戏，而且几乎横跨了所有系统。这些游戏包括了iPhone AppStore上一些顶级出色的TOP1游戏，如Night Sky等。这几年来，我投入了大量的时间来发展Chipmunk，才使得Chipmunk走到今天。更多信息请查阅[Chipmunk官网](http://chipmunk-physics.net/)。
 
 ## Objective-Chipmunk是什么？
 
@@ -93,7 +93,7 @@ space = [[ChipmunkSpace alloc] init];
         separate:@selector(separateCollision:space:)
 ];
 ```
-总共有4种碰撞事件，你只需要找到一个感兴趣的实现就可以了，如果想知道什么时候两个物体碰撞、什么时候Chipmunk处理碰撞、什么时候结束碰撞 这些都可以通过查阅文档来了解
+总共有4种碰撞事件，你只需要找到一个感兴趣的实现就可以了，如果想知道什么时候两个物体碰撞、什么时候Chipmunk处理碰撞、什么时候结束碰撞 这些都可以通过查阅[响应函数文档](http://files.slembcke.net/chipmunk/release/ChipmunkLatest-Docs/#Callbacks)来了解
 
 最后我们来创建一个掉落按钮的游戏对象，让它在view中显示，把它的物理属性添加到Chipmunk的space中
 。
@@ -138,7 +138,7 @@ static NSString *borderType = @"borderType";
         
 ### 游戏主循环:更新刚体和图像
 
-现在我们来看一下游戏的控制器（controller）都干了些什么，控制整个游戏的更新（update）循环。在这本节教程中用CADisplayLink来接收iPhone在屏幕重画是触发的事件，这是我知道的最简单的得到很流畅的动画的方式，让我们来快速的创建一个连接显示和加速（accelerometer）的回调函数：
+现在我们来看一下游戏的控制器（controller）都干了些什么，控制整个游戏的更新（update）循环。在这本节教程中用CADisplayLink来接收iPhone OS在屏幕重画是触发的事件，这是我知道的最简单的得到很流畅的动画的方式，让我们来快速的创建一个连接显示和加速（accelerometer）的回调函数：
 
 ```
 - (void)viewDidAppear:(BOOL)animated {
@@ -178,7 +178,7 @@ selector:@selector(update)];
 }
 ```
         
-相当简单，解释一下cpv这个函数，它的功能是根据x和y坐标创建一个Chipmunk中的一个向量，cpvmult()方法是创建一个单位向量，想要知道更多关于向量的信息可以自己去查阅文档，如果你是在使用Objectiv-C++就可以很容易的重载Chipmunk的运算符了。
+相当简单，解释一下cpv这个函数，它的功能是根据x和y坐标创建一个Chipmunk中的一个向量，cpvmult()方法是创建一个单位向量，想要知道更多关于向量的信息可以自己去查阅[cpVect C 文档](http://files.slembcke.net/chipmunk/release/ChipmunkLatest-Docs/#cpVect)，如果你是在使用Objectiv-C++就可以很容易的重载Chipmunk的运算符了。
 
 ### 碰撞的回调函数:begin
 
@@ -350,7 +350,7 @@ cpFloat moment = cpMomentForBox(mass, SIZE, SIZE);
         
 你可以轻松的为质量赋值并不需要使用任何特定的单位。只要确保他们彼此关联对比的要有意义。如果一个汽车的质量为1，那么一只狗的质量应该为0.01或者类似小的值。因为场景中只有一个按钮，所以我们为它设置的质量大与小无所谓了。反应会如出一辙。另一方面，对转动惯量进行猜测或赋值是个糟糕的想法。假设SIZE是100，那么按照上述方式计算的转动惯量将是850！
 
-为了乐趣所在，你应该尝试着看看不同的转动惯量值的影响，以及为什么使用Chipmunk提供的转动惯量估算函数很重要。你可以在`cpBody`C文件里找到更多的这些估算函数。
+为了乐趣所在，你应该尝试着看看不同的转动惯量值的影响，以及为什么使用Chipmunk提供的转动惯量估算函数很重要。你可以在[cpBody  C 文档](http://files.slembcke.net/chipmunk/release/ChipmunkLatest-Docs/#cpBody)里找到更多的这些估算函数。
 
 下面，我们来使用计算好的质量和转动惯量来初始化一个刚体：
 
