@@ -1,4 +1,4 @@
-#简易Objective-Chipmunk教程:
+# 简明Objective-Chipmunk教程:
 
 本教程的目标是简单的介绍下在iPhone游戏中使用Objective-Chipmunk。其中有很多注释，理解起来很容易。尽管代码只有100行左右，但我会从下面几个主题展开：
     
@@ -31,7 +31,7 @@ Chipmunk Object协议统一了基础Chipmunk类型，使得它很容易创建自
 
 你可以在[Objective-Chipmunk网站](http://howlingmoonsoftware.com/objectiveChipmunk.php)上查阅更多信息。虽然Objective-Chipmunk并不免费，但是增强的API肯定会为你节约时间和成本。同时你也将会支持Chipmunk的发展！
 
-## 为什么使用CocoaTouch类实现教程
+## 为什么使用Cocoa Touch实现本教程
 
 Cocoa Touch 实际上能够快速开发一款iPhone 游戏。因为硬件加速的原因会相当快，同时在屏幕上有许多对象也不会慢。Interface Builder也是一款简要的编辑器。我们用这个方式写了多款小游戏，并且让我们避免处理库的依耐性的麻烦。结合游戏的简洁性，使用任何华丽的空想都将是浪费时间。
 
@@ -63,12 +63,13 @@ Cocoa Touch 实际上能够快速开发一款iPhone 游戏。因为硬件加速�
 ```
 现在我们就可以把他们添加进来显示在界面上了，相当easy。
 
-### 初始化物理状态也简单:
+初始化物理世界：
 
 ```
 space = [[ChipmunkSpace alloc] init];
 ```
-现在，这个space对象里面什么也没有。我们添加的任何物理对象都会飞出屏幕之外。一般使用物理引擎的2D的项目都会在开始的时候设置屏幕的边界，Objective-Chipmunk也有一个很好的简便方法来实现。
+
+新创建的space对象里面什么也没有。我们添加的任何物理对象都会飞出屏幕之外。一般使用物理引擎的2D的项目都会在开始的时候设置屏幕的边界，Objective-Chipmunk也有一个很好的简便方法来实现。
 
 ```
 [space addBounds:self.view.bounds
@@ -136,7 +137,7 @@ static NSString *borderType = @"borderType";
 }
 ```
         
-### 游戏主循环:更新刚体和图像
+### 游戏主循环:更新物理和图像
 
 现在我们来看一下游戏的控制器（controller）都干了些什么，控制整个游戏的更新（update）循环。在这本节教程中用CADisplayLink来接收iPhone OS在屏幕重画是触发的事件，这是我知道的最简单的得到很流畅的动画的方式，让我们来快速的创建一个连接显示和加速（accelerometer）的回调函数：
 
@@ -180,7 +181,7 @@ selector:@selector(update)];
         
 相当简单，解释一下cpv这个函数，它的功能是根据x和y坐标创建一个Chipmunk中的一个向量，cpvmult()方法是创建一个单位向量，想要知道更多关于向量的信息可以自己去查阅[cpVect C 文档](http://files.slembcke.net/chipmunk/release/ChipmunkLatest-Docs/#cpVect)，如果你是在使用Objectiv-C++就可以很容易的重载Chipmunk的运算符了。
 
-### 碰撞的回调函数:begin
+### 碰撞回调:begin
 
 不同的碰撞回调类型对应不同的方法签名，begin回调方法可以写成像下面这样：
 
@@ -240,7 +241,7 @@ begin回调函数必须要返回一个boolean的值，如果返回true,那么Chi
 }
 ```
 
-### 碰撞的回调函数:separate
+### 碰撞回调:separate
 
 separate的回调方法和begin回调方法有些不一样，因为在调用separate回调函数的时候碰撞已经结束了，所以它不需要返回一个boolean类型来标识是否要忽略碰撞。
 
